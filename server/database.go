@@ -17,7 +17,7 @@ type Movie struct {
 }
 
 const movieSchema = `
-CREATE TABLE movies (
+CREATE TABLE IF NOT EXISTS movies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tmdb_id INTEGER NOT NULL UNIQUE,
     title TEXT NOT NULL,
@@ -38,7 +38,7 @@ func initDB(path string) {
 
 	db, err = sql.Open("sqlite", path)
 	if (err != nil) {
-		log.Fatalln("Couldn't connect to the database: %v", err)
+		log.Fatalf("Couldn't connect to the database: %v", err)
 	}
 	
 	_, err = db.Exec(movieSchema)
