@@ -38,11 +38,18 @@ func main() {
 	server.ListenAndServe()
 }
 
+// Format a reply to send some JSON
+func sendJSON(w http.ResponseWriter, data any) error {
+	w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(data)
+	return err
+}
+
 // get movies from the watchlist
 // TODO Add paramaters to filter by status
 func getMovies(w http.ResponseWriter, r *http.Request) {
 	watchlist := getWatchlist()
-	
+	sendJSON(w, watchlist)
 }
 
 // searches for a movie and sends details to user, but don't save info.
