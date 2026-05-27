@@ -19,9 +19,11 @@ func main() {
 
 	// Pass the TMDB API key over to tmdb.go
 	setApiKey(os.Getenv("TMDB_API_KEY"))
+	log.Println("Got TMDB API key")
 
 	// Set up the DB
 	initDB(os.Getenv("MOVIES_DATABASE_PATH"))
+	log.Println("Connected to database")
 
 	// Set up the REST API
 	r := http.NewServeMux()
@@ -33,9 +35,18 @@ func main() {
 
 	server := http.Server{
 		Addr:	os.Getenv("MOVIES_SERVER_URL"),
-		Handler:	r,
+		Handler:	logging(r),
 	}
+	
+	log.Printf("Server running on %s", server.Addr)
 	server.ListenAndServe()
+}
+
+func logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+		log.Println(r.Method, r.URL.Path)
+	})
 }
 
 // Format a reply to send some JSON
@@ -110,3 +121,4 @@ func patchMovie(w http.ResponseWriter, r *http.Request) {
 
 	setWatchedStatus(movieID, newStatus.Status)
 }
+
