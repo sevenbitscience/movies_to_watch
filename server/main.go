@@ -81,10 +81,13 @@ func postSearchMovie(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&search)
 	if err != nil {
+		log.Printf("Couldn't parse search term")
 		return	// Maybe let client know this failed??
 	}
 
-	movies := findMovies(search.Query)
+	var movies []Movie
+	findMovies(search.Query, &movies)
+
 	sendJSON(w, movies)
 }
 
