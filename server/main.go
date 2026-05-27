@@ -29,7 +29,7 @@ func main() {
 	r.HandleFunc("GET /movies", getMovies)
 	r.HandleFunc("POST /movies/search", postSearchMovie)
 	r.HandleFunc("POST /movies", postMovie)
-	r.HandleFunc("PATCH /movies/:id", patchMovie)
+	r.HandleFunc("PATCH /movies/{id}", patchMovie)
 
 	server := http.Server{
 		Addr:	os.Getenv("MOVIES_SERVER_URL"),
@@ -61,13 +61,13 @@ func postSearchMovie(w http.ResponseWriter, r *http.Request) {
 		Query	string `json:"query"`
 	}
 
-	err := c.ShouldBindJSON(&search)
+	err := json.NewDecoder(r.Body).Decode(&search)
 	if err != nil {
 		return	// Maybe let client know this failed??
 	}
 
 	movies := findMovies(search.Query)
-	c.IndentedJSON(http.StatusOK, movies)
+	sendJSON(w, movies)
 }
 
 
@@ -75,18 +75,18 @@ func postSearchMovie(w http.ResponseWriter, r *http.Request) {
 func postMovie(w http.ResponseWriter, r *http.Request) {
 	var newMovie Movie
 	
-	err := c.ShouldBindJSON(&newMovie)
+	err := json.NewDecoder(r.Body).Decode(&newMovie)
 	if (err != nil) {
 		return	// Should probably let client know or something?
 	}
 	
 	if (isMovieInDBbyTMDB(newMovie.TMDB_ID)) {
-		c.Status(http.StatusConflict)
+		w.WriteHeader(http.StatusConflict)
 		return
 	}
 	
 	addMovie(&newMovie)
-	c.Status(http.StatusCreated)
+	w.WriteHeader(http.StatusCreated)
 }
 
 
@@ -97,14 +97,14 @@ func patchMovie(w http.ResponseWriter, r *http.Request) {
 		Status	string `json:"status"`
 	}
 
-	err := c.ShouldBindJSON(&newStatus)
+	err := json.NewDecoder(r.Body).Decode(&newStatus)
 	if (err != nil) {
 		return
 	}
 
-	movieID, err := strconv.Atoi(c.Param("id"))
+	movieID, err := strconv.Atoi(r.PathValue("id"))
 	if (err != nil || isMovieInDBbyID(movieID)) {
-		c.Status(http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
