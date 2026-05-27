@@ -128,13 +128,23 @@ func setWatchedStatus(id int, status string) {
 
 // Check if a movie is in the database by tmdb ID
 func isMovieInDBbyTMDB(tmdb_id int) bool {
-	err := db.QueryRow("SELECT * FROM movies WHERE tmdb_id = ?", tmdb_id)
-	return err == nil 
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM movies WHERE tmdb_id = ?)", tmdb_id).Scan(&exists)
+	if err != nil {
+		log.Printf("Couldn't query database for movie with tmdb_id: %d", tmdb_id)
+		return false
+	}
+	return exists
 }
 
 // Check if a movie is in the database by tmdb ID
 func isMovieInDBbyID(id int) bool {
-	err := db.QueryRow("SELECT * FROM movies WHERE id = ?", id)
-	return err == nil 
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM movies WHERE id = ?)", id).Scan(&exists)
+	if err != nil {
+		log.Printf("Couldn't query database for movie with id: %d", id)
+		return false
+	}
+	return exists
 }
 
