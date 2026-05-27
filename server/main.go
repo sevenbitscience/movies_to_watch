@@ -63,6 +63,10 @@ func sendJSON(w http.ResponseWriter, data any) {
 // TODO Add paramaters to filter by status
 func getMovies(w http.ResponseWriter, r *http.Request) {
 	watchlist := getWatchlist()
+	if len(watchlist) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	sendJSON(w, watchlist)
 }
 
