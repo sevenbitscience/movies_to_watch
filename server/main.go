@@ -100,13 +100,13 @@ func postMovie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Adding a new movie %+v", newMovie)
-	
-	if (isMovieInDBbyTMDB(newMovie.TMDB_ID)) {
+	if (isMovieInDBbyTMDB(newMovie.TMDB_ID) == true) {
+		log.Printf("Tried to add movie with duplicate TMDB ID: %d", newMovie.TMDB_ID)
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
 	
+	log.Printf("Adding a new movie %+v", newMovie)
 	addMovie(&newMovie)
 	w.WriteHeader(http.StatusCreated)
 }
