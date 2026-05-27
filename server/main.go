@@ -3,11 +3,11 @@ package main
 import (
 	"os"
 	"log"
+	"encoding/json"
 	"strconv"
-	"net/http"
+	"net/http"	// Handle RESTful API with just standard library
 
-	"github.com/gin-gonic/gin" // Handle the RESTful API
-	"github.com/joho/godotenv" // Fetch info from .env file
+	"github.com/joho/godotenv"	// Fetch info from .env file
 )
 
 func main() {
@@ -23,31 +23,33 @@ func main() {
 	// Set up the DB
 	initDB(os.Getenv("MOVIES_DATABASE_PATH"))
 
-	// Set up Gin to handle the REST API
-	r := gin.Default()
+	// Set up the REST API
+	r := http.NewServeMux()
 
-	r.GET("/movies", getMovies)
-	r.POST("/movies/search", postSearchMovie)
-	r.POST("/movies", postMovie)
-	r.PATCH("/movies/:id", patchMovie)
+	r.HandleFunc("GET /movies", getMovies)
+	r.HandleFunc("POST /movies/search", postSearchMovie)
+	r.HandleFunc("POST /movies", postMovie)
+	r.HandleFunc("PATCH /movies/:id", patchMovie)
 
-	r.Run(os.Getenv("MOVIES_SERVER_URL"))
+	server := http.Server{
+		Addr:	os.Getenv("MOVIES_SERVER_URL"),
+		Handler:	r,
+	}
+	server.ListenAndServe()
 }
 
 // get movies from the watchlist
 // TODO Add paramaters to filter by status
-func getMovies(c *gin.Context) {
+func getMovies(w http.ResponseWriter, r *http.Request) {
 	watchlist := getWatchlist()
-	c.IndentedJSON(http.StatusOK, watchlist)
-}
-
-type SearchMovie struct {
-	Query	string `json:"query"`
+	
 }
 
 // searches for a movie and sends details to user, but don't save info.
 func postSearchMovie(c *gin.Context) {
-	var search SearchMovie
+	var search struct {
+		Query	string `json:"query"`
+	}
 
 	err := c.ShouldBindJSON(&search)
 	if err != nil {
@@ -78,13 +80,12 @@ func postMovie(c *gin.Context) {
 }
 
 
-type MovieStatus struct {
-	Status	string `json:"status"`
-}
 
 // Mark a movie as watched
 func patchMovie(c *gin.Context) {
-	var newStatus MovieStatus
+	var newStatus struct {
+		Status	string `json:"status"`
+	}
 
 	err := c.ShouldBindJSON(&newStatus)
 	if (err != nil) {
