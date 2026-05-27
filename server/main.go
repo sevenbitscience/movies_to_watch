@@ -39,10 +39,13 @@ func main() {
 }
 
 // Format a reply to send some JSON
-func sendJSON(w http.ResponseWriter, data any) error {
+func sendJSON(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(data)
-	return err
+	if (err != nil) {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // get movies from the watchlist
@@ -53,7 +56,7 @@ func getMovies(w http.ResponseWriter, r *http.Request) {
 }
 
 // searches for a movie and sends details to user, but don't save info.
-func postSearchMovie(c *gin.Context) {
+func postSearchMovie(w http.ResponseWriter, r *http.Request) {
 	var search struct {
 		Query	string `json:"query"`
 	}
@@ -69,7 +72,7 @@ func postSearchMovie(c *gin.Context) {
 
 
 // Add a movie to the watchlist
-func postMovie(c *gin.Context) {
+func postMovie(w http.ResponseWriter, r *http.Request) {
 	var newMovie Movie
 	
 	err := c.ShouldBindJSON(&newMovie)
@@ -89,7 +92,7 @@ func postMovie(c *gin.Context) {
 
 
 // Mark a movie as watched
-func patchMovie(c *gin.Context) {
+func patchMovie(w http.ResponseWriter, r *http.Request) {
 	var newStatus struct {
 		Status	string `json:"status"`
 	}
