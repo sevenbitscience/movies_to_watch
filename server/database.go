@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
-	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -63,11 +63,21 @@ func getWatchlist() ([]Movie, error) {
 
 	for rows.Next() {
 		var m Movie
-		err := rows.Scan(&m.ID, &m.TMDB_ID, &m.Title, &m.Year, &m.Genres, &m.Status)
+		var genresJSON string
+
+		err := rows.Scan(&m.ID, &m.TMDB_ID, &m.Title, &m.Year, &genresJSON, &m.Status)
 		if err != nil {
 			log.Println("Error reading movies from database!")
 			return nil, err
 		}
+
+		// Process genres back into an array
+		if genresJSON != "" {
+			err = json.Unmarshal([]byte(genresJSON), &m.Genres)
+		} else {
+			m.Genres = []string{}
+		}
+
 		watchlist = append(watchlist, m)
 	}
 
@@ -81,7 +91,11 @@ func getWatchlist() ([]Movie, error) {
 
 // Add a movie to the database
 func addMovie(movie *Movie) {
-	genreString := strings.Join(movie.Genres, ", ")
+	genreBytes, err := json.Marshal(movie.Genres)
+	if err != nil {
+		log.Println("Couldn't convert the genres to JSON")
+	}
+	genreString := string(genreBytes)
 	query := `
 	INSERT INTO movies 
 	(tmdb_id, title, release_year, genres)
@@ -90,7 +104,7 @@ func addMovie(movie *Movie) {
 	//WHERE NOT EXISTS (
 	//	SELECT 1 FROM movies WHERE tmdb_id = ?
 	//)`
-	_, err := db.Exec(query,
+	_, err = db.Exec(query,
 	movie.TMDB_ID,
 	movie.Title,
 	movie.Year,
