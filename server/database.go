@@ -1,8 +1,9 @@
 package main
 
 import (
-	"log"
 	"database/sql"
+	"log"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -11,8 +12,8 @@ type Movie struct {
 	ID 		int 	`json:"id"`
 	Title	string	`json:"title"`
 	TMDB_ID	int		`json:"tmdb_id"`
-	Year	int		`json:"year"`
-	Genres	string	`json:"genres"`
+	Year	int		`json:"release_year"`
+	Genres	[]string	`json:"genre"`
 	Status	string	`json:"status"`
 }
 
@@ -49,25 +50,77 @@ func initDB(path string) {
 
 // Get all the movies from the database
 // TODO: Get n movies from the database or filter movies from DB
-func getWatchlist() []Movie {
-	log.Fatalln("Not implemented")
-	return nil
+// Pagination with LIMIT and OFFSET
+func getWatchlist() ([]Movie, error) {
+	rows, err := db.Query("SELECT * FROM movies")
+	if err != nil {
+		log.Println("Couldn't get movies from database")
+		return nil, err
+	}
+	defer rows.Close()
+
+	var watchlist []Movie
+
+	for rows.Next() {
+		var m Movie
+		err := rows.Scan(&m.ID, &m.TMDB_ID, &m.Title, &m.Year, &m.Genres, &m.Status)
+		if err != nil {
+			log.Println("Error reading movies from database!")
+			return nil, err
+		}
+		watchlist = append(watchlist, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	
+	return watchlist, nil
 }
 
 
 // Add a movie to the database
-func addMovie(movie *Movie) {}
+func addMovie(movie *Movie) {
+	genreString := strings.Join(movie.Genres, ", ")
+	query := `
+	INSERT INTO movies 
+	(tmdb_id, title, release_year, genres)
+	VALUES
+	(?, ?, ?, ?)`
+	//WHERE NOT EXISTS (
+	//	SELECT 1 FROM movies WHERE tmdb_id = ?
+	//)`
+	_, err := db.Exec(query,
+	movie.TMDB_ID,
+	movie.Title,
+	movie.Year,
+	genreString,
+	)
+
+	if (err != nil) {
+		log.Printf("Couldn't add movie %+v", movie)
+	}
+}
 
 
 // Set a movie as watched
-func setWatchedStatus(id int, status string) {}
+func setWatchedStatus(id int, status string) {
+	query := "UPDATE movies SET status = ? WHERE id = ?"
+	_, err := db.Exec(query, status, id)
+	if (err != nil) {
+		log.Printf("Failed to execute SQL", )
+	}
+}
 
 // Check if a movie is in the database by tmdb ID
 func isMovieInDBbyTMDB(tmdb_id int) bool {
-	return false
+	err := db.QueryRow("SELECT * FROM movies WHERE tmdb_id = ?", tmdb_id)
+	return err == nil 
 }
 
 // Check if a movie is in the database by tmdb ID
 func isMovieInDBbyID(id int) bool {
-	return false
+	err := db.QueryRow("SELECT * FROM movies WHERE id = ?", id)
+	return err == nil 
 }
+

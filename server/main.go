@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
-	"log"
 	"encoding/json"
+	"log"
+	"net/http" // Handle RESTful API with just standard library
+	"os"
 	"strconv"
-	"net/http"	// Handle RESTful API with just standard library
 
-	"github.com/joho/godotenv"	// Fetch info from .env file
+	"github.com/joho/godotenv" // Fetch info from .env file
 )
 
 func main() {
@@ -44,8 +44,8 @@ func main() {
 
 func logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
 		log.Println(r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -62,7 +62,10 @@ func sendJSON(w http.ResponseWriter, data any) {
 // get movies from the watchlist
 // TODO Add paramaters to filter by status
 func getMovies(w http.ResponseWriter, r *http.Request) {
-	watchlist := getWatchlist()
+	watchlist, err := getWatchlist()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError);
+	}
 	if len(watchlist) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -92,8 +95,12 @@ func postMovie(w http.ResponseWriter, r *http.Request) {
 	
 	err := json.NewDecoder(r.Body).Decode(&newMovie)
 	if (err != nil) {
-		return	// Should probably let client know or something?
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Println("Couldn't decode the JSON body")
+		return
 	}
+
+	log.Printf("Adding a new movie %+v", newMovie)
 	
 	if (isMovieInDBbyTMDB(newMovie.TMDB_ID)) {
 		w.WriteHeader(http.StatusConflict)
