@@ -19,9 +19,14 @@ def make_request(url, method="GET", data=None):
 
     try:
         with urlopen(req, data=encoded_data) as response:
-            if response.status == 204:
+            # Read the raw response bytes
+            raw_response = response.read()
+            
+            # If there is no body content, don't try to parse JSON
+            if not raw_response or raw_response.strip() == b"":
                 return None
-            return json.loads(response.read().decode("utf-8"))
+                
+            return json.loads(raw_response.decode("utf-8"))
     except HTTPError as e:
         print(f"[-] Error ({e.code}):", e.reason)
         try:
@@ -49,7 +54,6 @@ def list_movies(status=None):
     print(f"\n{'ID':<4} | {'Title':<30} | {'Year':<6} | {'Status':<10} | {'Genres'}")
     print("-" * 80)
     for m in movies:
-        # Handle if genres come back as a list or a string representation
         genres = m.get('genre', [])
         if isinstance(genres, str):
             try:
@@ -78,7 +82,6 @@ def search_movie(query):
     print()
 
 def add_movie(tmdb_id, title, release_year, genre_list):
-    # Expecting comma separated genres from CLI, parse them into a true list
     genres = [g.strip() for g in genre_list.split(",")] if genre_list else []
     
     payload = {
@@ -89,7 +92,7 @@ def add_movie(tmdb_id, title, release_year, genre_list):
     }
     
     print(f"[*] Adding '{title}' to database...")
-    response = make_request(f"{BASE_URL}/movies", method="POST", data=payload)
+    make_request(f"{BASE_URL}/movies", method="POST", data=payload)
     print("[+] Movie successfully added to watchlist!")
 
 def watch_movie(movie_id):
