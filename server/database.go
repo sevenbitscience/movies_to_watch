@@ -4,17 +4,23 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
 
 type Movie struct {
-	ID 		int 	`json:"id"`
-	Title	string	`json:"title"`
-	TMDB_ID	int		`json:"tmdb_id"`
-	Year	int		`json:"release_year"`
+	ID 		int 		`json:"id"`
+	Title	string		`json:"title"`
+	TMDB_ID	int			`json:"tmdb_id"`
+	Year	*int		`json:"release_year"`
 	Genres	[]string	`json:"genre"`
-	Status	string	`json:"status"`
+	Status	string		`json:"status"`
+}
+
+// Filters for searching for movies
+type Filters struct {
+	Status 	*string	`json:"watched"`	// True means it has been watched
 }
 
 const movieSchema = `
@@ -51,8 +57,21 @@ func initDB(path string) {
 // Get all the movies from the database
 // TODO: Get n movies from the database or filter movies from DB
 // Pagination with LIMIT and OFFSET
-func getWatchlist() ([]Movie, error) {
-	rows, err := db.Query("SELECT * FROM movies")
+func getWatchlist(f *Filters) ([]Movie, error) {
+	query := "SELECT * FROM movies"
+
+	// Add requested filters
+	selected_filters := []string{}
+	if f.Status != nil {
+		selected_filters = append(selected_filters, "status = \"" + *f.Status + "\"")
+	}
+
+	if len(selected_filters) != 0 {
+		sql_filters := " WHERE " + strings.Join(selected_filters, " AND ")
+		query += sql_filters
+	}
+
+	rows, err := db.Query(query)
 	if err != nil {
 		log.Println("Couldn't get movies from database")
 		return nil, err

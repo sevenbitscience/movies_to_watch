@@ -73,7 +73,10 @@ func tmdbEntryToMovie(m *TmdbMovie) Movie {
 		if err != nil {
 			log.Printf("Couldn't parse year %s", splitDate[0])
 		}
-		newMovie.Year = justYear
+		if justYear != 0 {
+			newMovie.Year = new(int)
+			*newMovie.Year = justYear
+		}
 	}
 
 	return newMovie

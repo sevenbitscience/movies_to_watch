@@ -62,9 +62,17 @@ func sendJSON(w http.ResponseWriter, data any) {
 // get movies from the watchlist
 // TODO Add paramaters to filter by status
 func getMovies(w http.ResponseWriter, r *http.Request) {
-	watchlist, err := getWatchlist()
+	// Get filters from the request, if there are any
+	f := Filters{}
+	if r.URL.Query().Has("status") {
+		f.Status = new(string)
+		*f.Status = r.URL.Query().Get("status")
+	}
+
+	watchlist, err := getWatchlist(&f)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError);
+		return
 	}
 	if len(watchlist) == 0 {
 		w.WriteHeader(http.StatusNoContent)
@@ -124,15 +132,19 @@ func patchMovie(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&newStatus)
 	if (err != nil) {
+		log.Println("Couldn't parse patch request")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	movieID, err := strconv.Atoi(r.PathValue("id"))
-	if (err != nil || isMovieInDBbyID(movieID)) {
-		w.WriteHeader(http.StatusNotFound)
+	if (err != nil || !isMovieInDBbyID(movieID)) {
+		log.Printf("Failed to find movie with ID %s", r.PathValue("id"))
+		http.Error(w, "Couldn't find a movie with specified ID", http.StatusNotFound)
 		return
 	}
 
+	log.Printf("Setting status of %d to %s", movieID, newStatus.Status)
 	setWatchedStatus(movieID, newStatus.Status)
 }
 
