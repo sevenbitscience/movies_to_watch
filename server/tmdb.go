@@ -10,23 +10,12 @@ import (
 	"strings"
 )
 
-/*
-   "genre_ids": [
-     28
-   ],
-   "id": 347807,
-   "original_language": "hi",
-   "original_title": "Fight Club: Members Only",
-   "overview": "Four friends head off to Bombay and get involved in the mother and father of all gang wars.",
-   "popularity": 2.26,
-   "poster_path": "/aXFmWfWYCCxQTkCn7K86RvDiMHZ.jpg",
-   "release_date": "2006-02-17",
-   "title": "Fight Club: Members Only",
-   "video": false,
-   "vote_average": 4.5,
-   "vote_count": 12
-*/
+type Genre struct {
+	Id		int		`json:"id"`
+	Name	string	`json:"name"`
+}
 
+var GenreTable map[int]string
 
 type TmdbMovie struct {
 	Adult				bool	`json:"adult"`
@@ -45,12 +34,11 @@ type TmdbMovie struct {
 	Vote_count			int		`json:"vote_count"`
 }
 
-type Genre struct {
-	Id		int		`json:"id"`
-	Name	string	`json:"name"`
-}
+var apiKey string
 
-var GenreTable map[int]string
+func setApiKey(key string) {
+	apiKey = "Bearer " + key
+}
 
 func tmdbEntryToMovie(m *TmdbMovie) Movie {
 	// Parse out genres and convert them to strings
@@ -80,12 +68,6 @@ func tmdbEntryToMovie(m *TmdbMovie) Movie {
 	}
 
 	return newMovie
-}
-
-var apiKey string
-
-func setApiKey(key string) {
-	apiKey = "Bearer " + key
 }
 
 func readApi(url string) ([]byte, error) {
@@ -169,13 +151,6 @@ func findMovies(title string, movies *[]Movie) {
 	for _, v := range(movieResults.Results) {
 		*movies = append(*movies, tmdbEntryToMovie(&v))
 	}
-}
-
-
-// Get the information about a movie by ID
-func getMovie(tmdb_id int) Movie {
-	var movie Movie
-	return movie
 }
 
 // Get the name associated with a genre ID
