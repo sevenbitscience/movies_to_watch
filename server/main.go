@@ -32,6 +32,7 @@ func main() {
 	r.HandleFunc("POST /movies/search", postSearchMovie)
 	r.HandleFunc("POST /movies", postMovie)
 	r.HandleFunc("PATCH /movies/{id}", patchMovie)
+	r.HandleFunc("DELETE /movies/{id}", deleteMovie)
 
 	server := http.Server{
 		Addr:	os.Getenv("MOVIES_SERVER_URL"),
@@ -52,7 +53,7 @@ func logging(next http.Handler) http.Handler {
 func corsMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Access-Control-Allow-Origin", "*")
-        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
         w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
         // If it's a preflight OPTIONS request, stop here and reply with 204
@@ -164,3 +165,14 @@ func patchMovie(w http.ResponseWriter, r *http.Request) {
 	setWatchedStatus(movieID, newStatus.Status)
 }
 
+
+func deleteMovie(w http.ResponseWriter, r *http.Request) {
+	movieID, err := strconv.Atoi(r.PathValue("id"))
+	if (err != nil || !isMovieInDBbyID(movieID)) {
+		log.Printf("Failed to find movie with ID %s", r.PathValue("id"))
+		http.Error(w, "Couldn't find a movie with specified ID", http.StatusNotFound)
+		return
+	}
+	log.Printf("Deleting movie %d", movieID)
+	removeMovie(movieID)
+}

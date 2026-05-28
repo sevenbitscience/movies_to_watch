@@ -145,6 +145,14 @@ func setWatchedStatus(id int, status string) {
 	}
 }
 
+func removeMovie(id int) {
+	query := "DELETE FROM movies WHERE id = ?"
+	_, err := db.Exec(query, id)
+	if (err != nil) {
+		log.Printf("Failed to execute SQL", )
+	}
+}
+
 // Check if a movie is in the database by tmdb ID
 func isMovieInDBbyTMDB(tmdb_id int) bool {
 	var exists bool
