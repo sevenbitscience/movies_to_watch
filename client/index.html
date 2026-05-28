@@ -3,21 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watchlist Sync Center</title>
+    <title>Movies To Watch</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
 
     <div class="container mx-auto p-6 max-w-7xl">
-        <header class="flex justify-between items-center pb-6 mb-6 border-b border-gray-800">
+        <header class="flex flex-col md:flex-row md:justify-between md:items-center pb-6 mb-6 border-b border-gray-800 gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-indigo-400">Watchlist Sync Center</h1>
-                <p class="text-sm text-gray-400 mt-1">Pre-Internship Development Sandbox Portfolio</p>
+                <h1 class="text-3xl font-bold text-indigo-400">Movies To Watch</h1>
             </div>
-            <div class="flex space-x-2">
-                <button onclick="fetchWatchlist()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition">Refresh All</button>
-                <button onclick="fetchWatchlist('pending')" class="bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 px-4 py-2 rounded-lg text-sm font-medium transition">Pending</button>
-                <button onclick="fetchWatchlist('watched')" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium transition">Watched</button>
+            
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                
+                <div class="relative w-full sm:w-64">
+                    <button onclick="toggleGenreDropdown(event)" id="dropdown-btn" 
+                            class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 w-full flex justify-between items-center transition">
+                        <span id="dropdown-label" class="truncate text-gray-400">Filter by genres...</span>
+                        <svg class="h-3 w-3 text-gray-400 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    
+                    <div id="dropdown-menu" class="hidden absolute left-0 right-0 mt-1 bg-gray-950 border border-gray-800 rounded-lg shadow-2xl z-50 max-h-60 overflow-y-auto p-2 space-y-1">
+                        </div>
+                </div>
+
+                <div class="flex space-x-1.5 bg-gray-950 p-1 rounded-lg border border-gray-800">
+                    <button onclick="setStatusFilter('')" id="btn-filter-all" class="bg-gray-800 text-gray-200 px-3 py-1.5 rounded-md text-xs font-medium transition">All</button>
+                    <button onclick="setStatusFilter('pending')" id="btn-filter-pending" class="text-amber-400 hover:bg-amber-600/10 px-3 py-1.5 rounded-md text-xs font-medium transition">Pending</button>
+                    <button onclick="setStatusFilter('watched')" id="btn-filter-watched" class="text-emerald-400 hover:bg-emerald-600/10 px-3 py-1.5 rounded-md text-xs font-medium transition">Watched</button>
+                </div>
             </div>
         </header>
 
@@ -36,7 +52,8 @@
                                 <th class="py-3 px-4">Title</th>
                                 <th class="py-3 px-4 w-20 text-center">Year</th>
                                 <th class="py-3 px-4">Genres</th>
-                                <th class="py-3 px-4 text-center w-28">Status</th>
+                                <th class="py-3 px-4 text-center w-24">Status</th>
+                                <th class="py-3 px-4 text-center w-16">Action</th>
                             </tr>
                         </thead>
                         <tbody id="watchlist-body" class="divide-y divide-gray-800/50 text-sm">
@@ -68,6 +85,11 @@
 
     <script>
         const BASE_URL = "http://localhost:5000";
+        
+        // Track visual filtering states globally
+        let currentStatusFilter = '';
+        let activeSelectedGenres = new Set();
+        let globalUniqueGenresList = [];
 
         // Helper framework wrapper handling standard fetch logic
         async function apiRequest(endpoint, method = "GET", data = null) {
@@ -90,7 +112,6 @@
                     return null;
                 }
 
-                // Handle Empty Response Payload Specification (e.g., 201 Created or 200 OK with empty body)
                 const text = await response.text();
                 return text ? JSON.parse(text) : true;
             } catch (err) {
@@ -99,22 +120,147 @@
             }
         }
 
-        // Fetch and draw rows for your stored tracking list
-        async function fetchWatchlist(statusFilter = '') {
-            let query = '/movies';
-            if (statusFilter) query += `?status=${statusFilter}`;
+        // Extracts all unique genres across every stored row to populate dropdown options
+        async function updateDynamicGenreOptions() {
+            // Always request the un-filtered complete list to inventory all available genres
+            const completeList = await apiRequest('/movies');
+            if (!completeList || completeList === "ERROR") return;
+
+            const trackedGenres = new Set();
+            completeList.forEach(movie => {
+                let genres = movie.genre || [];
+                if (typeof genres === 'string') {
+                    try { genres = JSON.parse(genres); } catch(e) { genres = [genres]; }
+                }
+                if (Array.isArray(genres)) {
+                    genres.forEach(g => { if (g) trackedGenres.add(g.trim()); });
+                }
+            });
+
+            globalUniqueGenresList = Array.from(trackedGenres).sort();
+            renderGenreDropdownMenu();
+        }
+
+        // Renders the multi-select options inside the floating box panel
+        function renderGenreDropdownMenu() {
+            const menu = document.getElementById('dropdown-menu');
+            menu.innerHTML = '';
+
+            if (globalUniqueGenresList.length === 0) {
+                menu.innerHTML = '<p class="text-[10px] text-gray-500 text-center py-2">No genres found.</p>';
+                return;
+            }
+
+            globalUniqueGenresList.forEach(genre => {
+                const isChecked = activeSelectedGenres.has(genre);
+                const item = document.createElement('div');
+                item.className = `flex items-center px-2 py-1.5 rounded cursor-pointer transition select-none text-xs text-gray-300 hover:bg-gray-800 ${isChecked ? 'bg-indigo-600/20 text-indigo-400' : ''}`;
+                item.onclick = (e) => {
+                    e.stopPropagation(); // Stop click from bubbling up and automatically closing menu
+                    toggleGenreSelection(genre);
+                };
+
+                item.innerHTML = `
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} 
+                           class="rounded bg-gray-900 border-gray-700 text-indigo-600 focus:ring-0 focus:ring-offset-0 mr-2 w-3.5 h-3.5 pointer-events-none">
+                    <span class="truncate">${genre}</span>
+                `;
+                menu.appendChild(item);
+            });
+
+            updateDropdownLabel();
+        }
+
+        // Toggles local UI state flags when an item choice changes state
+        function toggleGenreSelection(genre) {
+            if (activeSelectedGenres.has(genre)) {
+                activeSelectedGenres.delete(genre);
+            } else {
+                activeSelectedGenres.add(genre);
+            }
+            renderGenreDropdownMenu();
+            applyActiveFilters();
+        }
+
+        // Dynamic textual update of dropdown field placeholders
+        function updateDropdownLabel() {
+            const label = document.getElementById('dropdown-label');
+            if (activeSelectedGenres.size === 0) {
+                label.innerText = "Filter by genres...";
+                label.className = "truncate text-gray-400";
+            } else {
+                label.innerText = Array.from(activeSelectedGenres).join(', ');
+                label.className = "truncate text-indigo-400 font-medium";
+            }
+        }
+
+        function toggleGenreDropdown(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('dropdown-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Close dropdown container instantly if user clicks outside context zone elements
+        document.addEventListener('click', () => {
+            document.getElementById('dropdown-menu').classList.add('hidden');
+        });
+
+        // Constructs full query strings dynamically combining state filters + genre tags
+        function applyActiveFilters() {
+            let queryParams = [];
             
-            const movies = await apiRequest(query);
+            if (currentStatusFilter) {
+                queryParams.push(`status=${currentStatusFilter}`);
+            }
+            
+            if (activeSelectedGenres.size > 0) {
+                const genresString = Array.from(activeSelectedGenres).join(',');
+                queryParams.push(`genres=${encodeURIComponent(genresString)}`);
+            }
+            
+            let endpoint = '/movies';
+            if (queryParams.length > 0) {
+                endpoint += `?${queryParams.join('&')}`;
+            }
+            
+            fetchWatchlistFromEndpoint(endpoint);
+        }
+
+        // Helper to update active status state highlighting and reload array matrices
+        function setStatusFilter(status) {
+            currentStatusFilter = status;
+            
+            const btnAll = document.getElementById('btn-filter-all');
+            const btnPending = document.getElementById('btn-filter-pending');
+            const btnWatched = document.getElementById('btn-filter-watched');
+            
+            [btnAll, btnPending, btnWatched].forEach(btn => {
+                btn.className = "text-gray-400 hover:bg-gray-800/50 px-3 py-1.5 rounded-md text-xs font-medium transition";
+            });
+            
+            if (status === '') {
+                btnAll.className = "bg-gray-800 text-gray-200 px-3 py-1.5 rounded-md text-xs font-medium transition";
+            } else if (status === 'pending') {
+                btnPending.className = "bg-amber-600/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-md text-xs font-medium transition";
+            } else if (status === 'watched') {
+                btnWatched.className = "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-md text-xs font-medium transition";
+            }
+            
+            applyActiveFilters();
+        }
+
+        // Core compilation table loader engine
+        async function fetchWatchlistFromEndpoint(endpoint) {
+            const movies = await apiRequest(endpoint);
             const tbody = document.getElementById('watchlist-body');
             tbody.innerHTML = '';
 
             if (!movies || movies.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-gray-500">Your watchlist is completely empty.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-gray-500">No movies found matching the active criteria.</td></tr>`;
                 return;
             }
 
             movies.forEach(movie => {
-                // Formatting defense for internal database variations or string fields
                 let genres = movie.genre || [];
                 if (typeof genres === 'string') {
                     try { genres = JSON.parse(genres); } catch(e) { genres = [genres]; }
@@ -139,12 +285,21 @@
                             ${movie.status.toUpperCase()}
                         </button>
                     </td>
+                    <td class="py-3.5 px-4 text-center">
+                        <button onclick="deleteMovie(${movie.id})" 
+                                class="text-gray-500 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition group-hover:opacity-100 duration-150"
+                                title="Remove from watchlist">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
         }
 
-        // Trigger network request outbound to TMDB third-party routing profile
+        // Action routing wrappers proxy calls backwards through master list hooks
         async function searchTMDB() {
             const query = document.getElementById('search-input').value.trim();
             if (!query) return;
@@ -181,7 +336,6 @@
             });
         }
 
-        // Add a discovered film node directly to your primary storage array
         async function addMovie(movieItem) {
             const payload = {
                 tmdb_id: parseInt(movieItem.tmdb_id),
@@ -191,23 +345,47 @@
             };
 
             const success = await apiRequest('/movies', 'POST', payload);
-            if (success) fetchWatchlist();
+            if (success) {
+                await updateDynamicGenreOptions();
+                applyActiveFilters();
+            }
         }
 
-        // Process inversion modifications to change pending states
         async function toggleStatus(movieId, currentStatus) {
             const targetStatus = currentStatus === 'pending' ? 'watched' : 'pending';
             const success = await apiRequest(`/movies/${movieId}`, 'PATCH', { status: targetStatus });
-            if (success) fetchWatchlist();
+            if (success) applyActiveFilters();
         }
 
-        // Capture Enter-key events inside input text element fields
+        async function deleteMovie(movieId) {
+            if (!confirm(`Are you sure you want to remove movie ID ${movieId} from your watchlist?`)) {
+                return;
+            }
+            const success = await apiRequest(`/movies/${movieId}`, 'DELETE');
+            if (success) {
+                // If a unique genre was deleted completely, clean up the multi-select registry mappings
+                await updateDynamicGenreOptions();
+                
+                // Clear an active filter value if it was removed from existence
+                activeSelectedGenres.forEach(g => {
+                    if (!globalUniqueGenresList.includes(g)) activeSelectedGenres.delete(g);
+                });
+                
+                applyActiveFilters();
+            }
+        }
+
         document.getElementById('search-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') searchTMDB();
         });
 
-        // Initialize display configuration on document presentation ready state
-        fetchWatchlist();
+        // Initialize display configuration and dynamically pull dropdown criteria values on load
+        async function initApp() {
+            await updateDynamicGenreOptions();
+            applyActiveFilters();
+        }
+
+        initApp();
     </script>
 </body>
 </html>
