@@ -78,7 +78,6 @@ func getWatchlist(f *Filters) ([]Movie, error) {
 		// Now stick that in the SQL statement
 		genreFilter := `EXISTS (SELECT 1 FROM json_each(movies.genres) WHERE value IN (` + 
 			strings.Join(genresInQuotes, ", ") + "))"
-		log.Println("Trying to filter genres with ", genreFilter)
 		selected_filters = append(selected_filters, genreFilter)
 	}
 
@@ -87,7 +86,6 @@ func getWatchlist(f *Filters) ([]Movie, error) {
 		query += sql_filters
 	}
 
-	log.Println("Full SQL looks like ", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Println("Couldn't get movies from database")

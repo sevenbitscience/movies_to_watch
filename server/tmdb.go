@@ -82,7 +82,7 @@ func readApi(url string) ([]byte, error) {
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("Authorization", apiKey)
 
-	log.Printf("Quering TMDB @ %s", url)
+	//log.Printf("Quering TMDB @ %s", url)
 	// Actually make the request
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
