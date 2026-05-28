@@ -20,7 +20,8 @@ type Movie struct {
 
 // Filters for searching for movies
 type Filters struct {
-	Status 	*string	`json:"watched"`	// True means it has been watched
+	Status 	*string		`json:"watched"`
+	Genres	[]string 	`json:"genres"`
 }
 
 const movieSchema = `
@@ -62,8 +63,23 @@ func getWatchlist(f *Filters) ([]Movie, error) {
 
 	// Add requested filters
 	selected_filters := []string{}
+	// Add status filter
 	if f.Status != nil {
 		selected_filters = append(selected_filters, "status = \"" + *f.Status + "\"")
+	}
+	// Add genre filter
+	if len(f.Genres) != 0 {
+		// Start with the inital building blocks
+		// Now we need each genre inside of single quotes
+		genresInQuotes := make([]string, len(f.Genres))
+		for i, v := range f.Genres {
+			genresInQuotes[i] = "'" + v + "'"
+		}
+		// Now stick that in the SQL statement
+		genreFilter := `EXISTS (SELECT 1 FROM json_each(movies.genres) WHERE value IN (` + 
+			strings.Join(genresInQuotes, ", ") + "))"
+		log.Println("Trying to filter genres with ", genreFilter)
+		selected_filters = append(selected_filters, genreFilter)
 	}
 
 	if len(selected_filters) != 0 {
@@ -71,6 +87,7 @@ func getWatchlist(f *Filters) ([]Movie, error) {
 		query += sql_filters
 	}
 
+	log.Println("Full SQL looks like ", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Println("Couldn't get movies from database")

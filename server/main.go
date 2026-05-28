@@ -6,6 +6,7 @@ import (
 	"net/http" // Handle RESTful API with just standard library
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv" // Fetch info from .env file
 )
@@ -77,13 +78,17 @@ func sendJSON(w http.ResponseWriter, data any) {
 }
 
 // get movies from the watchlist
-// TODO Add paramaters to filter by status
 func getMovies(w http.ResponseWriter, r *http.Request) {
 	// Get filters from the request, if there are any
 	f := Filters{}
+	// Filter by status
 	if r.URL.Query().Has("status") {
 		f.Status = new(string)
 		*f.Status = r.URL.Query().Get("status")
+	}
+	// Filter by Genre
+	if r.URL.Query().Has("genres") {
+		f.Genres = strings.Split(r.URL.Query().Get("genres"), ",")
 	}
 
 	watchlist, err := getWatchlist(&f)
