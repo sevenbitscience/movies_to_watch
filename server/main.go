@@ -35,7 +35,7 @@ func main() {
 
 	server := http.Server{
 		Addr:	os.Getenv("MOVIES_SERVER_URL"),
-		Handler:	logging(r),
+		Handler:	corsMiddleware(logging(r)),
 	}
 	
 	log.Printf("Server running on %s", server.Addr)
@@ -47,6 +47,22 @@ func logging(next http.Handler) http.Handler {
 		log.Println(r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+        // If it's a preflight OPTIONS request, stop here and reply with 204
+        if r.Method == "OPTIONS" {
+            w.WriteHeader(http.StatusNoContent)
+            return
+        }
+
+        next.ServeHTTP(w, r)
+    })
 }
 
 // Format a reply to send some JSON
