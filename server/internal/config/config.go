@@ -12,7 +12,7 @@ var Config struct {
 	ServerURL     *string
 	TMBDkey       *string
 	DatabasePath  *string
-	WebAssetsPath *string
+	WebClientPath *string
 }
 
 func InitConfig() error {
@@ -35,8 +35,8 @@ func InitConfig() error {
 	databasePath, nf := os.LookupEnv("MOVIES_DATABASE_PATH"); if nf != true {
 		return errors.New("'MOVIES_DATABASE_PATH' is not set") 
 	}
-	webAssetsPath, nf := os.LookupEnv("WEB_ASSETS_PATH"); if nf != true {
-		return errors.New("'WEB_ASSETS_PATH' is not set") 
+	webClientPath, nf := os.LookupEnv("WEB_CLIENT_PATH"); if nf != true {
+		return errors.New("'WEB_CLIENT_PATH' is not set") 
 	}
 
 	// Now set the data in the Config
@@ -49,8 +49,8 @@ func InitConfig() error {
 	Config.DatabasePath = new(string)
 	*Config.DatabasePath = databasePath
 
-	Config.WebAssetsPath = new(string)
-	*Config.WebAssetsPath = webAssetsPath
+	Config.WebClientPath = new(string)
+	*Config.WebClientPath = webClientPath
 
 	return nil
 }

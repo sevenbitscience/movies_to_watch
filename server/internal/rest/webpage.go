@@ -1,14 +1,33 @@
 package rest
 
 import (
+	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/sevenbitscience/movies_to_watch/server/internal/config"
 )
 
-func getFileServer() http.Handler {
-	files := http.FileServer(http.Dir(*config.Config.WebAssetsPath))
-	return files
-}
+func getFileServer(w http.ResponseWriter, r *http.Request) {
+	// Parse the webpage
+	tmpl, err := template.ParseFiles(*config.Config.WebClientPath)
+	if err != nil {
+		http.Error(w, "Failed to parse web client", http.StatusInternalServerError)
+	}
 	
+	scheme := "HTTP"
+	if r.TLS != nil {
+		scheme = "HTTPS" 
+	}
 
+	dataURL := fmt.Sprintf("%s://%s", scheme, *config.Config.ServerURL)
+
+	type PageData struct {
+		DataURL string
+	}
+
+	data := PageData{
+		DataURL: dataURL,
+	}
+	tmpl.Execute(w, data)
+}

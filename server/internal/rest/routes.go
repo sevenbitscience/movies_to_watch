@@ -7,9 +7,7 @@ import (
 func setupRoutes() *http.ServeMux {
 	r := http.NewServeMux()
 
-	fileserver := getFileServer()
-
-	r.Handle("/", fileserver)
+	r.HandleFunc("/", getFileServer)
 	r.HandleFunc("GET /movies", getMovies)
 	r.HandleFunc("POST /movies/search", postSearchMovie)
 	r.HandleFunc("POST /movies", postMovie)
