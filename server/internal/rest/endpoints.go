@@ -17,7 +17,7 @@ import (
 func encodeBody[T any](w http.ResponseWriter, data T) {
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(data)
-	if (err != nil) {
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -26,7 +26,7 @@ func encodeBody[T any](w http.ResponseWriter, data T) {
 func decodeBody[T any](r *http.Request) (T, error) {
 	var v T
 	err := json.NewDecoder(r.Body).Decode(&v)
-	if (err != nil) {
+	if err != nil {
 		return v, fmt.Errorf("Failed decoding JSON %w", err)
 	}
 	return v, nil
@@ -48,7 +48,7 @@ func getMovies(w http.ResponseWriter, r *http.Request) {
 
 	watchlist, err := database.GetWatchlist(&f)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError);
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if len(watchlist) == 0 {
@@ -61,10 +61,11 @@ func getMovies(w http.ResponseWriter, r *http.Request) {
 // searches for a movie and sends details to user, but don't save info.
 func postSearchMovie(w http.ResponseWriter, r *http.Request) {
 	type SearchRequest struct {
-		Query	string `json:"query"`
+		Query string `json:"query"`
 	}
 
-	search, err := decodeBody[SearchRequest](r); if err != nil {
+	search, err := decodeBody[SearchRequest](r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -75,40 +76,39 @@ func postSearchMovie(w http.ResponseWriter, r *http.Request) {
 	encodeBody(w, movies)
 }
 
-
 // Add a movie to the watchlist
 func postMovie(w http.ResponseWriter, r *http.Request) {
-	newMovie, err := decodeBody[types.Movie](r); if err != nil {
+	newMovie, err := decodeBody[types.Movie](r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
-	if (database.IsMovieInDBbyTMDB(newMovie.TMDB_ID) == true) {
+
+	if database.IsMovieInDBbyTMDB(newMovie.TMDB_ID) == true {
 		log.Printf("Tried to add movie with duplicate TMDB ID: %d", newMovie.TMDB_ID)
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
-	
+
 	log.Printf("Adding a new movie %+v", newMovie)
 	database.AddMovie(&newMovie)
 	w.WriteHeader(http.StatusCreated)
 }
 
-
-
 // Mark a movie as watched
 func patchMovie(w http.ResponseWriter, r *http.Request) {
 	type StatusChangeRequest struct {
-		Status	string `json:"status"`
+		Status string `json:"status"`
 	}
 
-	newStatus, err := decodeBody[StatusChangeRequest](r); if err != nil {
+	newStatus, err := decodeBody[StatusChangeRequest](r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	movieID, err := strconv.Atoi(r.PathValue("id"))
-	if (err != nil || !database.IsMovieInDBbyID(movieID)) {
+	if err != nil || !database.IsMovieInDBbyID(movieID) {
 		log.Printf("Failed to find movie with ID %s", r.PathValue("id"))
 		http.Error(w, "Couldn't find a movie with specified ID", http.StatusNotFound)
 		return
@@ -118,10 +118,9 @@ func patchMovie(w http.ResponseWriter, r *http.Request) {
 	database.SetWatchedStatus(movieID, newStatus.Status)
 }
 
-
 func deleteMovie(w http.ResponseWriter, r *http.Request) {
 	movieID, err := strconv.Atoi(r.PathValue("id"))
-	if (err != nil || !database.IsMovieInDBbyID(movieID)) {
+	if err != nil || !database.IsMovieInDBbyID(movieID) {
 		log.Printf("Failed to find movie with ID %s", r.PathValue("id"))
 		http.Error(w, "Couldn't find a movie with specified ID", http.StatusNotFound)
 		return
@@ -130,4 +129,3 @@ func deleteMovie(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Deleting movie %d", movieID)
 	database.RemoveMovie(movieID)
 }
-

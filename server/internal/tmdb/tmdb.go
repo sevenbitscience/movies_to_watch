@@ -10,32 +10,31 @@ import (
 	"strings"
 
 	"github.com/sevenbitscience/movies_to_watch/server/internal/types"
-
 )
 
 type Genre struct {
-	Id		int		`json:"id"`
-	Name	string	`json:"name"`
+	Id   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 var GenreTable map[int]string
 
 // For pulling movie info from tmdb
 type TmdbMovie struct {
-	Adult				bool	`json:"adult"`
-	Backdrop_path		string	`json:"backdrop_path"`
-	Genre_ids			[]int	`json:"genre_ids"`
-	Id					int		`json:"id"`
-	Original_language	string	`json:"original_language"`
-	Original_title		string	`json:"original_title"`
-	Overview			string	`json:"overview"`
-	Popularity			float64	`json:"popularity"`
-	Poster_path			string	`json:"poster_path"`
-	Release_date		string	`json:"release_date"`
-	Title				string	`json:"title"`
-	Video				bool	`json:"video"`
-	Vote_average		float64	`json:"vote_average"`
-	Vote_count			int		`json:"vote_count"`
+	Adult             bool    `json:"adult"`
+	Backdrop_path     string  `json:"backdrop_path"`
+	Genre_ids         []int   `json:"genre_ids"`
+	Id                int     `json:"id"`
+	Original_language string  `json:"original_language"`
+	Original_title    string  `json:"original_title"`
+	Overview          string  `json:"overview"`
+	Popularity        float64 `json:"popularity"`
+	Poster_path       string  `json:"poster_path"`
+	Release_date      string  `json:"release_date"`
+	Title             string  `json:"title"`
+	Video             bool    `json:"video"`
+	Vote_average      float64 `json:"vote_average"`
+	Vote_count        int     `json:"vote_count"`
 }
 
 var apiKey string
@@ -47,15 +46,15 @@ func SetApiKey(key string) {
 func tmdbEntryToMovie(m *TmdbMovie) types.Movie {
 	// Parse out genres and convert them to strings
 	var genreStrings []string
-	for _, v := range(m.Genre_ids) {
+	for _, v := range m.Genre_ids {
 		genreStrings = append(genreStrings, lookupGenre(v))
 	}
 
 	// Create a new Movie object
 	newMovie := types.Movie{
-		Title: m.Title,
+		Title:   m.Title,
 		TMDB_ID: m.Id,
-		Genres: genreStrings,
+		Genres:  genreStrings,
 	}
 
 	// Parse the year from YYYY-MM-DD format
@@ -94,7 +93,7 @@ func readApi(url string) ([]byte, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
-	
+
 	// Make sure the response was okay
 	if res.StatusCode != http.StatusOK {
 		log.Printf("Bad response from TMDB: %d %s", res.StatusCode, res.Status)
@@ -111,13 +110,13 @@ func readApi(url string) ([]byte, error) {
 }
 
 // https://api.themoviedb.org/3/search/movie?query=this%20is%20my%20title&include_adult=true&language=en-US&page=1
- 
+
 // Get the top n results from tmdb
 func FindMovies(title string, movies *[]types.Movie) {
 	baseURL, err := url.Parse("https://api.themoviedb.org/3/search/movie")
 	if err != nil {
 		log.Println("Error parsing URL in findMovies()")
-		return 
+		return
 	}
 
 	// Set up the parameters for the search
@@ -139,10 +138,10 @@ func FindMovies(title string, movies *[]types.Movie) {
 
 	// Parse that response JSON into an array of movie results
 	var movieResults struct {
-		Page			int			`json:"page"`
-		Results			[]TmdbMovie	`json:"results"`
-		TotalPages		int			`json:"total_pages"`
-		TotalResults	int			`json:"total_results"`
+		Page         int         `json:"page"`
+		Results      []TmdbMovie `json:"results"`
+		TotalPages   int         `json:"total_pages"`
+		TotalResults int         `json:"total_results"`
 	}
 
 	err = json.Unmarshal(response, &movieResults)
@@ -152,7 +151,7 @@ func FindMovies(title string, movies *[]types.Movie) {
 	}
 
 	// Convert those to the simpler Movie struct
-	for _, v := range(movieResults.Results) {
+	for _, v := range movieResults.Results {
 		*movies = append(*movies, tmdbEntryToMovie(&v))
 	}
 }
@@ -174,9 +173,9 @@ func lookupGenre(g int) string {
 	// We need to ask the database for the table
 	var movieGenreList struct {
 		Genres []struct {
-			Id		int		`json:"id"`
-			Name	string	`json:"name"`
-		}					`json:"genres"`
+			Id   int    `json:"id"`
+			Name string `json:"name"`
+		} `json:"genres"`
 	}
 
 	// Query TMDB for the list of genres and parse out the JSON
@@ -192,7 +191,7 @@ func lookupGenre(g int) string {
 	}
 
 	// Now enter the genres into the map
-	for _, val := range(movieGenreList.Genres) {
+	for _, val := range movieGenreList.Genres {
 		GenreTable[val.Id] = val.Name
 	}
 

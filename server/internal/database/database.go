@@ -13,8 +13,8 @@ import (
 
 // Filters for searching for movies
 type Filters struct {
-	Status 	*string		`json:"watched"`
-	Genres	[]string 	`json:"genres"`
+	Status *string  `json:"watched"`
+	Genres []string `json:"genres"`
 }
 
 const movieSchema = `
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS movies (
 var db *sql.DB
 
 /* Initiate the connection to the database
- * 
+ *
  * Creates a new database if there is not one at the provided path.
  * Takes the path to the sqlite database the parameter
  */
@@ -38,12 +38,12 @@ func InitDB(path string) {
 	var err error
 
 	db, err = sql.Open("sqlite", path)
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("Couldn't connect to the database: %v", err)
 	}
-	
+
 	_, err = db.Exec(movieSchema)
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("Couldn't write schema to database: %v", err)
 	}
 }
@@ -58,7 +58,7 @@ func GetWatchlist(f *Filters) ([]types.Movie, error) {
 	selected_filters := []string{}
 	// Add status filter
 	if f.Status != nil {
-		selected_filters = append(selected_filters, "status = \"" + *f.Status + "\"")
+		selected_filters = append(selected_filters, "status = \""+*f.Status+"\"")
 	}
 	// Add genre filter
 	if len(f.Genres) != 0 {
@@ -69,7 +69,7 @@ func GetWatchlist(f *Filters) ([]types.Movie, error) {
 			genresInQuotes[i] = "'" + v + "'"
 		}
 		// Now stick that in the SQL statement
-		genreFilter := `EXISTS (SELECT 1 FROM json_each(movies.genres) WHERE value IN (` + 
+		genreFilter := `EXISTS (SELECT 1 FROM json_each(movies.genres) WHERE value IN (` +
 			strings.Join(genresInQuotes, ", ") + "))"
 		selected_filters = append(selected_filters, genreFilter)
 	}
@@ -111,10 +111,9 @@ func GetWatchlist(f *Filters) ([]types.Movie, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	
+
 	return watchlist, nil
 }
-
 
 // Add a movie to the database
 func AddMovie(movie *types.Movie) {
@@ -132,32 +131,31 @@ func AddMovie(movie *types.Movie) {
 	//	SELECT 1 FROM movies WHERE tmdb_id = ?
 	//)`
 	_, err = db.Exec(query,
-	movie.TMDB_ID,
-	movie.Title,
-	movie.Year,
-	genreString,
+		movie.TMDB_ID,
+		movie.Title,
+		movie.Year,
+		genreString,
 	)
 
-	if (err != nil) {
+	if err != nil {
 		log.Printf("Couldn't add movie %+v", movie)
 	}
 }
-
 
 // Set a movie as watched
 func SetWatchedStatus(id int, status string) {
 	query := "UPDATE movies SET status = ? WHERE id = ?"
 	_, err := db.Exec(query, status, id)
-	if (err != nil) {
-		log.Printf("Failed to execute SQL", )
+	if err != nil {
+		log.Printf("Failed to execute SQL")
 	}
 }
 
 func RemoveMovie(id int) {
 	query := "DELETE FROM movies WHERE id = ?"
 	_, err := db.Exec(query, id)
-	if (err != nil) {
-		log.Printf("Failed to execute SQL", )
+	if err != nil {
+		log.Printf("Failed to execute SQL")
 	}
 }
 
@@ -182,4 +180,3 @@ func IsMovieInDBbyID(id int) bool {
 	}
 	return exists
 }
-
