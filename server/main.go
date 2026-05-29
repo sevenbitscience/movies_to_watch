@@ -8,6 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sevenbitscience/movies_to_watch/server/internal/types"
+	"github.com/sevenbitscience/movies_to_watch/server/internal/database"
+	"github.com/sevenbitscience/movies_to_watch/server/internal/tmdb"
+
 	"github.com/joho/godotenv" // Fetch info from .env file
 )
 
@@ -19,11 +23,11 @@ func main() {
 	}
 
 	// Pass the TMDB API key over to tmdb.go
-	setApiKey(os.Getenv("TMDB_API_KEY"))
+	tmdb.SetApiKey(os.Getenv("TMDB_API_KEY"))
 	log.Println("Got TMDB API key")
 
 	// Set up the DB
-	initDB(os.Getenv("MOVIES_DATABASE_PATH"))
+	database.InitDB(os.Getenv("MOVIES_DATABASE_PATH"))
 	log.Println("Connected to database")
 
 	// Set up the REST API
@@ -80,7 +84,7 @@ func sendJSON(w http.ResponseWriter, data any) {
 // get movies from the watchlist
 func getMovies(w http.ResponseWriter, r *http.Request) {
 	// Get filters from the request, if there are any
-	f := Filters{}
+	f := database.Filters{}
 	// Filter by status
 	if r.URL.Query().Has("status") {
 		f.Status = new(string)
@@ -91,7 +95,7 @@ func getMovies(w http.ResponseWriter, r *http.Request) {
 		f.Genres = strings.Split(r.URL.Query().Get("genres"), ",")
 	}
 
-	watchlist, err := getWatchlist(&f)
+	watchlist, err := database.GetWatchlist(&f)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError);
 		return
@@ -115,8 +119,8 @@ func postSearchMovie(w http.ResponseWriter, r *http.Request) {
 		return	// Maybe let client know this failed??
 	}
 
-	var movies []Movie
-	findMovies(search.Query, &movies)
+	var movies []types.Movie
+	tmdb.FindMovies(search.Query, &movies)
 
 	sendJSON(w, movies)
 }
@@ -124,7 +128,7 @@ func postSearchMovie(w http.ResponseWriter, r *http.Request) {
 
 // Add a movie to the watchlist
 func postMovie(w http.ResponseWriter, r *http.Request) {
-	var newMovie Movie
+	var newMovie types.Movie
 	
 	err := json.NewDecoder(r.Body).Decode(&newMovie)
 	if (err != nil) {
@@ -133,14 +137,14 @@ func postMovie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if (isMovieInDBbyTMDB(newMovie.TMDB_ID) == true) {
+	if (database.IsMovieInDBbyTMDB(newMovie.TMDB_ID) == true) {
 		log.Printf("Tried to add movie with duplicate TMDB ID: %d", newMovie.TMDB_ID)
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
 	
 	log.Printf("Adding a new movie %+v", newMovie)
-	addMovie(&newMovie)
+	database.AddMovie(&newMovie)
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -160,24 +164,25 @@ func patchMovie(w http.ResponseWriter, r *http.Request) {
 	}
 
 	movieID, err := strconv.Atoi(r.PathValue("id"))
-	if (err != nil || !isMovieInDBbyID(movieID)) {
+	if (err != nil || !database.IsMovieInDBbyID(movieID)) {
 		log.Printf("Failed to find movie with ID %s", r.PathValue("id"))
 		http.Error(w, "Couldn't find a movie with specified ID", http.StatusNotFound)
 		return
 	}
 
 	log.Printf("Setting status of %d to %s", movieID, newStatus.Status)
-	setWatchedStatus(movieID, newStatus.Status)
+	database.SetWatchedStatus(movieID, newStatus.Status)
 }
 
 
 func deleteMovie(w http.ResponseWriter, r *http.Request) {
 	movieID, err := strconv.Atoi(r.PathValue("id"))
-	if (err != nil || !isMovieInDBbyID(movieID)) {
+	if (err != nil || !database.IsMovieInDBbyID(movieID)) {
 		log.Printf("Failed to find movie with ID %s", r.PathValue("id"))
 		http.Error(w, "Couldn't find a movie with specified ID", http.StatusNotFound)
 		return
 	}
 	log.Printf("Deleting movie %d", movieID)
-	removeMovie(movieID)
+	database.RemoveMovie(movieID)
 }
+

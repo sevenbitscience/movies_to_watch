@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"database/sql"
@@ -6,17 +6,10 @@ import (
 	"log"
 	"strings"
 
+	"github.com/sevenbitscience/movies_to_watch/server/internal/types"
+
 	_ "modernc.org/sqlite"
 )
-
-type Movie struct {
-	ID 		int 		`json:"id"`
-	Title	string		`json:"title"`
-	TMDB_ID	int			`json:"tmdb_id"`
-	Year	*int		`json:"release_year"`
-	Genres	[]string	`json:"genre"`
-	Status	string		`json:"status"`
-}
 
 // Filters for searching for movies
 type Filters struct {
@@ -41,7 +34,7 @@ var db *sql.DB
  * Creates a new database if there is not one at the provided path.
  * Takes the path to the sqlite database the parameter
  */
-func initDB(path string) {
+func InitDB(path string) {
 	var err error
 
 	db, err = sql.Open("sqlite", path)
@@ -58,7 +51,7 @@ func initDB(path string) {
 // Get all the movies from the database
 // TODO: Get n movies from the database or filter movies from DB
 // Pagination with LIMIT and OFFSET
-func getWatchlist(f *Filters) ([]Movie, error) {
+func GetWatchlist(f *Filters) ([]types.Movie, error) {
 	query := "SELECT * FROM movies"
 
 	// Add requested filters
@@ -93,10 +86,10 @@ func getWatchlist(f *Filters) ([]Movie, error) {
 	}
 	defer rows.Close()
 
-	var watchlist []Movie
+	var watchlist []types.Movie
 
 	for rows.Next() {
-		var m Movie
+		var m types.Movie
 		var genresJSON string
 
 		err := rows.Scan(&m.ID, &m.TMDB_ID, &m.Title, &m.Year, &genresJSON, &m.Status)
@@ -124,7 +117,7 @@ func getWatchlist(f *Filters) ([]Movie, error) {
 
 
 // Add a movie to the database
-func addMovie(movie *Movie) {
+func AddMovie(movie *types.Movie) {
 	genreBytes, err := json.Marshal(movie.Genres)
 	if err != nil {
 		log.Println("Couldn't convert the genres to JSON")
@@ -152,7 +145,7 @@ func addMovie(movie *Movie) {
 
 
 // Set a movie as watched
-func setWatchedStatus(id int, status string) {
+func SetWatchedStatus(id int, status string) {
 	query := "UPDATE movies SET status = ? WHERE id = ?"
 	_, err := db.Exec(query, status, id)
 	if (err != nil) {
@@ -160,7 +153,7 @@ func setWatchedStatus(id int, status string) {
 	}
 }
 
-func removeMovie(id int) {
+func RemoveMovie(id int) {
 	query := "DELETE FROM movies WHERE id = ?"
 	_, err := db.Exec(query, id)
 	if (err != nil) {
@@ -169,7 +162,7 @@ func removeMovie(id int) {
 }
 
 // Check if a movie is in the database by tmdb ID
-func isMovieInDBbyTMDB(tmdb_id int) bool {
+func IsMovieInDBbyTMDB(tmdb_id int) bool {
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM movies WHERE tmdb_id = ?)", tmdb_id).Scan(&exists)
 	if err != nil {
@@ -180,7 +173,7 @@ func isMovieInDBbyTMDB(tmdb_id int) bool {
 }
 
 // Check if a movie is in the database by tmdb ID
-func isMovieInDBbyID(id int) bool {
+func IsMovieInDBbyID(id int) bool {
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM movies WHERE id = ?)", id).Scan(&exists)
 	if err != nil {

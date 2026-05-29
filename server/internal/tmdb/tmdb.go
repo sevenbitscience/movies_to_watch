@@ -1,4 +1,4 @@
-package main
+package tmdb
 
 import (
 	"encoding/json"
@@ -8,6 +8,9 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/sevenbitscience/movies_to_watch/server/internal/types"
+
 )
 
 type Genre struct {
@@ -17,6 +20,7 @@ type Genre struct {
 
 var GenreTable map[int]string
 
+// For pulling movie info from tmdb
 type TmdbMovie struct {
 	Adult				bool	`json:"adult"`
 	Backdrop_path		string	`json:"backdrop_path"`
@@ -36,11 +40,11 @@ type TmdbMovie struct {
 
 var apiKey string
 
-func setApiKey(key string) {
+func SetApiKey(key string) {
 	apiKey = "Bearer " + key
 }
 
-func tmdbEntryToMovie(m *TmdbMovie) Movie {
+func tmdbEntryToMovie(m *TmdbMovie) types.Movie {
 	// Parse out genres and convert them to strings
 	var genreStrings []string
 	for _, v := range(m.Genre_ids) {
@@ -48,7 +52,7 @@ func tmdbEntryToMovie(m *TmdbMovie) Movie {
 	}
 
 	// Create a new Movie object
-	newMovie := Movie{
+	newMovie := types.Movie{
 		Title: m.Title,
 		TMDB_ID: m.Id,
 		Genres: genreStrings,
@@ -109,7 +113,7 @@ func readApi(url string) ([]byte, error) {
 // https://api.themoviedb.org/3/search/movie?query=this%20is%20my%20title&include_adult=true&language=en-US&page=1
  
 // Get the top n results from tmdb
-func findMovies(title string, movies *[]Movie) {
+func FindMovies(title string, movies *[]types.Movie) {
 	baseURL, err := url.Parse("https://api.themoviedb.org/3/search/movie")
 	if err != nil {
 		log.Println("Error parsing URL in findMovies()")
