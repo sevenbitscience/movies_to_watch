@@ -9,3 +9,4 @@ type Movie struct {
 	Genres  []string `json:"genre"`
 	Status  string   `json:"status"`
 }
+

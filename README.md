@@ -21,6 +21,7 @@ Settings for the server should be provided in a .env file.
 ```
 # For this server
 MOVIES_SERVER_URL=":5000"
+WEB_ASSETS_PATH="./web"
 
 # For TMDB API
 TMDB_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
