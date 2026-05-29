@@ -1,4 +1,4 @@
-package rest
+package web
 
 import (
 	"fmt"
@@ -14,13 +14,8 @@ func getFileServer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to parse web client", http.StatusInternalServerError)
 	}
-	
-	scheme := "HTTP"
-	if r.TLS != nil {
-		scheme = "HTTPS" 
-	}
 
-	dataURL := fmt.Sprintf("%s://%s", scheme, *config.Config.ServerURL)
+	dataURL := fmt.Sprintf("HTTP://%s", *config.Config.ServerURL)
 
 	type PageData struct {
 		DataURL string

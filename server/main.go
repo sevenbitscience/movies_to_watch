@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/sevenbitscience/movies_to_watch/server/internal/database"
-	"github.com/sevenbitscience/movies_to_watch/server/internal/rest"
+	"github.com/sevenbitscience/movies_to_watch/server/internal/web"
 	"github.com/sevenbitscience/movies_to_watch/server/internal/tmdb"
 	"github.com/sevenbitscience/movies_to_watch/server/internal/config"
 
@@ -24,8 +24,8 @@ func main() {
 	log.Println("Connected to database")
 
 	// Set up the REST API
-	server := rest.SetupServer(*config.Config.ServerURL)
+	server := web.SetupServer(*config.Config.ServerURL)
 
 	log.Printf("Server running on %s", server.Addr)
-	server.ListenAndServe()
+	log.Fatal(server.ListenAndServe())
 }
