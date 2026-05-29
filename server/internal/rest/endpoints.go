@@ -1,25 +1,35 @@
 package rest
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http" // Handle RESTful API with just standard library
 	"strconv"
 	"strings"
-	"net/http" // Handle RESTful API with just standard library
-	"encoding/json"
 
-	"github.com/sevenbitscience/movies_to_watch/server/internal/types"
 	"github.com/sevenbitscience/movies_to_watch/server/internal/database"
 	"github.com/sevenbitscience/movies_to_watch/server/internal/tmdb"
+	"github.com/sevenbitscience/movies_to_watch/server/internal/types"
 )
 
 // Format a reply to send some JSON
-func sendJSON(w http.ResponseWriter, data any) {
+func encodeBody[T any](w http.ResponseWriter, data T) {
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(data)
 	if (err != nil) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func decodeBody[T any](r *http.Request) (T, error) {
+	var v T
+	err := json.NewDecoder(r.Body).Decode(&v)
+	if (err != nil) {
+		return v, fmt.Errorf("Failed decoding JSON %w", err)
+	}
+	return v, nil
 }
 
 // get movies from the watchlist
@@ -45,39 +55,34 @@ func getMovies(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	sendJSON(w, watchlist)
+	encodeBody(w, watchlist)
 }
 
 // searches for a movie and sends details to user, but don't save info.
 func postSearchMovie(w http.ResponseWriter, r *http.Request) {
-	var search struct {
+	type SearchRequest struct {
 		Query	string `json:"query"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&search)
-	if err != nil {
-		log.Printf("Couldn't parse search term")
-		return	// Maybe let client know this failed??
+	search, err := decodeBody[SearchRequest](r); if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	var movies []types.Movie
 	tmdb.FindMovies(search.Query, &movies)
 
-	sendJSON(w, movies)
+	encodeBody(w, movies)
 }
 
 
 // Add a movie to the watchlist
 func postMovie(w http.ResponseWriter, r *http.Request) {
-	var newMovie types.Movie
-	
-	err := json.NewDecoder(r.Body).Decode(&newMovie)
-	if (err != nil) {
+	newMovie, err := decodeBody[types.Movie](r); if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Println("Couldn't decode the JSON body")
 		return
 	}
-
+	
 	if (database.IsMovieInDBbyTMDB(newMovie.TMDB_ID) == true) {
 		log.Printf("Tried to add movie with duplicate TMDB ID: %d", newMovie.TMDB_ID)
 		w.WriteHeader(http.StatusConflict)
@@ -93,14 +98,12 @@ func postMovie(w http.ResponseWriter, r *http.Request) {
 
 // Mark a movie as watched
 func patchMovie(w http.ResponseWriter, r *http.Request) {
-	var newStatus struct {
+	type StatusChangeRequest struct {
 		Status	string `json:"status"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&newStatus)
-	if (err != nil) {
-		log.Println("Couldn't parse patch request")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	newStatus, err := decodeBody[StatusChangeRequest](r); if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -123,6 +126,7 @@ func deleteMovie(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Couldn't find a movie with specified ID", http.StatusNotFound)
 		return
 	}
+
 	log.Printf("Deleting movie %d", movieID)
 	database.RemoveMovie(movieID)
 }
