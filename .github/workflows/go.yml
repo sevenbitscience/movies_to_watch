@@ -1,0 +1,47 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-linux-amd64:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Create relese directory
+      run: |
+        mkdir ./server/latest-linux-amd64
+        mkdir ./server/latest-linux-amd64/web
+        cp client/index.html ./server/latest-linux-amd64/web/index.html
+        cp ./server/.env.anon ./server/latest-linux-amd64/.env
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: '1.25'
+    - name: Get dependencies
+      run: |
+        cd ./server
+        go get .
+    - name: Build for amd64
+      run: |
+        cd ./server
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -trimpath -o ./latest-linux-amd64/server .
+    - name: Compress release
+      run: tar -cJvf ./server/latest-linux-amd64.tar.xz ./server/latest-linux-amd64
+    - name: Upload release artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: latest-linux-amd64
+        path: ./server/latest-linux-amd64.tar.xz
+        retention-days: 30
+        if-no-files-found: warn
+        archive: false
+    - name: Clean up
+      run: rm ./server/latest-linux-amd64.tar.xz ./server/latest-linux-amd64
