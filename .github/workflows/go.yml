@@ -19,7 +19,7 @@ jobs:
       run: |
         mkdir ./server/latest-linux-amd64
         mkdir ./server/latest-linux-amd64/web
-        cp ./client/index.html ./server/latest-linux-amd64/web/index.html
+        cp ./server/web/index.html ./server/latest-linux-amd64/web/index.html
         cp ./server/.env.anon ./server/latest-linux-amd64/.env
     - name: Set up Go
       uses: actions/setup-go@v6
@@ -32,9 +32,11 @@ jobs:
     - name: Build for amd64
       run: |
         cd ./server
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -trimpath -o ./latest-linux-amd64/server .
+        time $(CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -trimpath -o ./latest-linux-amd64/server .)
     - name: Compress release
-      run: tar -cJvf ./server/latest-linux-amd64.tar.xz ./server/latest-linux-amd64
+      run: |
+        cd ./server
+        tar -cJvf ./latest-linux-amd64.tar.xz ./latest-linux-amd64
     - name: Upload release artifact
       uses: actions/upload-artifact@v7
       with:
@@ -54,7 +56,7 @@ jobs:
       run: |
         mkdir ./server/latest-linux-arm32
         mkdir ./server/latest-linux-arm32/web
-        cp ./client/index.html ./server/latest-linux-arm32/web/index.html
+        cp ./server/web/index.html ./server/latest-linux-arm32/web/index.html
         cp ./server/.env.anon ./server/latest-linux-arm32/.env
     - name: Set up Go
       uses: actions/setup-go@v6
@@ -67,9 +69,11 @@ jobs:
     - name: Build for arm32
       run: |
         cd ./server
-        CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -trimpath -o ./latest-linux-arm32/server .
+        time $(CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -trimpath -o ./latest-linux-arm32/server .)
     - name: Compress release
-      run: tar -cJvf ./server/latest-linux-arm32.tar.xz ./server/latest-linux-arm32
+      run: |
+        cd ./server
+        tar -cJvf ./latest-linux-arm32.tar.xz ./latest-linux-arm32
     - name: Upload release artifact
       uses: actions/upload-artifact@v7
       with:
