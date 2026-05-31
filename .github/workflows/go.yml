@@ -19,7 +19,7 @@ jobs:
       run: |
         mkdir ./server/latest-linux-amd64
         mkdir ./server/latest-linux-amd64/web
-        cp client/index.html ./server/latest-linux-amd64/web/index.html
+        cp ./client/index.html ./server/latest-linux-amd64/web/index.html
         cp ./server/.env.anon ./server/latest-linux-amd64/.env
     - name: Set up Go
       uses: actions/setup-go@v6
@@ -44,4 +44,39 @@ jobs:
         if-no-files-found: warn
         archive: false
     - name: Clean up
-      run: rm ./server/latest-linux-amd64.tar.xz ./server/latest-linux-amd64
+      run: rm -r ./server/latest-linux-amd64.tar.xz ./server/latest-linux-amd64
+  
+  build-linux-arm32:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Create relese directory
+      run: |
+        mkdir ./server/latest-linux-arm32
+        mkdir ./server/latest-linux-arm32/web
+        cp ./client/index.html ./server/latest-linux-arm32/web/index.html
+        cp ./server/.env.anon ./server/latest-linux-arm32/.env
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: '1.25'
+    - name: Get dependencies
+      run: |
+        cd ./server
+        go get .
+    - name: Build for arm32
+      run: |
+        cd ./server
+        CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -trimpath -o ./latest-linux-arm32/server .
+    - name: Compress release
+      run: tar -cJvf ./server/latest-linux-arm32.tar.xz ./server/latest-linux-arm32
+    - name: Upload release artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: latest-linux-arm32
+        path: ./server/latest-linux-arm32.tar.xz
+        retention-days: 30
+        if-no-files-found: warn
+        archive: false
+    - name: Clean up
+      run: rm -r ./server/latest-linux-arm32.tar.xz ./server/latest-linux-arm32
