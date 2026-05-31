@@ -24,7 +24,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version-file: './server/go.sum'
+        go-version: './server/go.mod'
         cache-dependency-path: './server/go.sum'
     - name: Get dependencies
       run: |
@@ -62,7 +62,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version-file: './server/go.sum'
+        go-version-file: './server/go.mod'
         cache-dependency-path: './server/go.sum'
     - name: Get dependencies
       run: |
